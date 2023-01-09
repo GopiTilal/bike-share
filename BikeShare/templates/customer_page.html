@@ -1,0 +1,270 @@
+<head>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCcO7TBAhqCQGkzRxioL1Ntt7i66SeOBig&callback=initMap"
+  type="text/javascript"></script>
+</head>
+
+{% extends 'base.html' %}
+
+    <!DOCTYPE html>
+    <head>
+      <script async defer
+                src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCcO7TBAhqCQGkzRxioL1Ntt7i66SeOBig&callback=initMap"
+                type="text/javascript"></script>
+    </head>
+
+{% block content %}
+    <body>
+    <br>
+    <h5>Your Details</h5>
+    <table align="center">
+        <thead>
+        <tr>
+            <th>Username</th>
+            <th>Email Address</th>
+            <th>Hires in Progress</th>
+            <th>Wallet balance</th>
+            <th>Amount Owed</th>
+
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>{{ request.user.username }}</td>
+            <td>{{ request.user.email }}</td>
+            <td>{{ request.user.hires_in_progress }}</td>
+            <td>${{ request.user.wallet_balance }}</td>
+            <td>${{ request.user.amount_owed }}</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="container" align="center" style="padding: 10px">
+
+        <button type="button" id="cancel" class="cancelbtn waves-effect waves-light btn"
+                onclick="location.href='{% url 'bikeshare:top-up' %}'">Top Up Balance
+        </button>
+        <button type="button" id="cancel" class="cancelbtn waves-effect waves-light btn"
+                onclick="location.href='{% url 'bikeshare:pay-balance' %}'">Pay Balance
+        </button>
+        </div>
+    <br>
+    {% if repair_message %}
+
+        <a><center>{{ repair_message }} </center></a>
+
+    {% endif %}
+
+
+    {%  if request.user.hires_in_progress > 0  %}
+
+    <h5>Your Current Hires</h5>
+    <table>
+        <thead>
+        <tr>
+            <th>Bike ID</th>
+            <th>Start Station</th>
+            <th>Start Time</th>
+            <th></th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for order in customers_orders %}
+
+            {% if not order.is_complete and order.user.pk == request.user.id %}
+
+                <form action="{% url 'bikeshare:return_bike' order.id%}" method="post">
+                    {% csrf_token %}
+                    <tr>
+                        {% if not order.bike.is_faulty %}
+                        <th><label>{{ order.bike.id }}</label></th>
+                         {% else %}
+                            <th><label>{{ order.bike.id }} (Faulty)</label></th>
+                         {% endif %}
+
+                        <th><label> {{ order.start_station }}</label></th>
+                        <th><label>{{ order.start_time }}</label></th>
+                        <th>
+                            <button type="submit" class="cancelbtn waves-effect waves-light btn" name="return_station"
+                                    value="">Return Bike
+                            </button>
+                </form>
+                <th><br>
+                    {% if not order.bike.is_faulty %}
+                    <form action="{% url 'bikeshare:report_faulty' order.id %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="cancelbtn waves-effect waves-light btn" name="report_faulty"
+                                value="">Report Faulty
+                        </button>
+                    {% endif %}
+                    </form>
+                </th>
+                </tr>
+        {% endif %}
+        {% endfor %}
+        </tbody>
+    </table>
+
+    {% endif %}
+
+    <br>
+
+    <h5>Station Locations</h5>
+
+    {% include 'city_map.html' %}
+
+
+    <br>
+
+    {% if request.user.amount_owed >= 30.00 %}
+
+        <h5>Rent a Bike<a> - Please repay your balance before renting another bike.</a></h5>
+
+    {% elif request.user.hires_in_progress > 3 %}
+
+        <h5>Rent a Bike<a> - Please return one or more bikes before renting another.</a></h5>
+
+    {% else %}
+
+        <h5>Rent a Bike</h5>
+    {% endif %}
+
+    <table>
+        <thead>
+        <tr>
+            <th align="center">Station Name</th>
+            <th>Available Bikes</th>
+            <th>Rent Bike</th>
+            <th>Bike model</th>  
+        </tr>
+        </thead>
+             <tbody>
+        {% for station in all_stations %}
+            <form action="{% url 'bikeshare:rent_bike' station.id %}" method="post">
+                {% csrf_token %}
+                <tr>
+                    <td>
+                        <label>{{ station.station_name }} </label>
+                    </td>
+                    <td>
+                        <label>{{ station.number_of_bikes }}</label>
+                    </td>
+                    <td>
+
+                     {% if request.user.amount_owed >= 30.00 or request.user.hires_in_progress > 3 %}
+
+                        {% if station.number_of_bikes > 0 %}
+                            <button type="submit" class="cancelbtn waves-effect waves-light btn" name="user_id"
+                                    value="{{ request.user.id }}" disabled>Rent Bike
+                            </button>
+                        {% else %}
+                            <a>No bikes available</a>
+                        {% endif %}
+
+                    {% else %}
+
+                    {% if station.number_of_bikes > 0 %}
+                            <button type="submit" class="cancelbtn waves-effect waves-light btn" name="user_id"
+                                    value="{{ request.user.id }}">Rent Bike
+                            </button>
+                        {% else %}
+                            <a>No bikes available</a>
+                        {% endif %}
+
+
+                    {% endif %}
+
+
+                    </td>
+                    <td>
+                        <label>{{ station.model }}</label>
+                    </td>
+                </tr> 
+            </form>
+        {% endfor %}
+        
+        </tbody>
+    </table>
+    <br><br>
+    
+        <link rel="stylesheet" href="style.css">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+      <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+      <meta http-equiv="x-ua-compatible" content="ie=edge">
+      <title>Reviews</title>
+      <script src="https://kit.fontawesome.com/44f557ccce.js"></script>
+    
+    </head>
+    <body>
+    
+    <div class="rev-section">
+    
+    <h2 class="title">Our Customer Love Us</h2>
+    
+    <div class="reviews">
+    
+    <div class="review">
+       <div class="head-review">
+          <img src="" width="250px">
+       </div>
+       <div class="body-review">
+          <div class="name-review">Manohar.S</div>
+          <div class="place-review">Vijayawada</div>
+          <div class="rating">
+             <i class="fas fa-star"></i>
+             <i class="fas fa-star"></i>
+             <i class="fas fa-star"></i>
+             <i class="fas fa-star"></i>
+             <i class="fas fa-star-half"></i>
+          </div>
+          <div class="desc-review">Best service with wee maintained bikes and affordable price. We enjoyed our trip to Goa, all thanks to renting my bike.
+    
+        </div>
+       </div>
+    </div>
+    <div class="review">
+       <div class="head-review">
+          <img src="" width="250px">
+       </div>
+       <div class="body-review">
+          <div class="name-review">Vineeth.V</div>
+          <div class="place-review">Kadapa</div>
+          <div class="rating">
+             <i class="fas fa-star"></i>
+             <i class="fas fa-star"></i>
+             <i class="fas fa-star"></i>
+             <i class="fas fa-star"></i>
+             <i class="fas fa-star"></i>
+          </div>
+          <div class="desc-review"> I had taken two bikes from SVS for a trip down to Vijayawada from Kadapa. The bikes were in decent condition and I did not face any problem with bikes on the trip</div>
+       </div>
+    </div>
+    <div class="review">
+       <div class="head-review">
+          <img src="" width="250px">
+       </div>
+       <div class="body-review">
+          <div class="name-review">Shankar</div>
+          <div class="place-review">Kakinada</div>
+          <div class="rating">
+             <i class="fas fa-star"></i>
+             <i class="fas fa-star"></i>
+             <i class="fas fa-star"></i>
+             <i class="fas fa-star"></i>
+             <i class="fas fa-star-half"></i>
+          </div>
+          <div class="desc-review">it was Best Experience in my life, I feel very happy with SVS rentals. I took a bike from Kakinada to hyderabad.It was Good. Better to travel with SVS rentals.</div>
+       </div>
+    </div>
+    
+    </div>
+    
+    </div>
+    
+{% endblock %}
+
+</body>
+
+</html>
